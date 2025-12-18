@@ -47,7 +47,7 @@
       align-items: flex-end;
       justify-content: space-between;
       gap: 16px;
-      padding: 18px 14px 26px;
+      padding: 18px 14px 18px;
     }
 
     .title{ display:flex; flex-direction: column; gap: 8px; }
@@ -78,6 +78,7 @@
       font-size: 13px;
       color: var(--muted);
       user-select: none;
+      white-space: nowrap;
     }
     .dot{
       width: 10px;
@@ -86,6 +87,56 @@
       background: linear-gradient(135deg, var(--accent1), #60a5fa);
       box-shadow: 0 0 0 4px rgba(124,58,237,.18);
     }
+
+    /* NEW: filter bar */
+    .filters{
+      display:flex;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 14px 18px;
+    }
+
+    .filter-group{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+
+    .select{
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.92);
+      font-size: 13.5px;
+      outline: none;
+      min-width: 160px;
+    }
+
+    .select:focus{
+      border-color: rgba(124,58,237,.55);
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 9px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.82);
+      font-size: 12.5px;
+      user-select:none;
+    }
+
+    .chip strong{ color: rgba(255,255,255,.92); }
 
     .grid{
       display:grid;
@@ -113,6 +164,7 @@
 
     @media (max-width: 900px){
       header{ flex-direction: column; align-items: flex-start; }
+      .filters{ flex-direction: column; align-items: flex-start; }
       .card-inner{ grid-template-columns: 1fr; }
     }
 
@@ -239,6 +291,9 @@
       margin-top: 10px;
       flex-wrap: wrap;
     }
+    input[type="text"], textarea{
+      font-family: inherit;
+    }
     input[type="text"]{
       flex: 1 1 190px;
       padding: 10px 12px;
@@ -249,6 +304,19 @@
       outline: none;
     }
     input[type="text"]::placeholder{ color: rgba(255,255,255,.45); }
+
+    textarea{
+      width: 100%;
+      min-height: 90px;
+      resize: vertical;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.92);
+      outline: none;
+    }
+    textarea::placeholder{ color: rgba(255,255,255,.45); }
 
     button{
       cursor: pointer;
@@ -290,6 +358,13 @@
     .status.warn{ color: rgba(245,158,11,.95); }
     .status.err{ color: rgba(239,68,68,.95); }
 
+    .divider{
+      height: 1px;
+      background: rgba(255,255,255,.10);
+      margin: 18px 0;
+      border-radius: 999px;
+    }
+
     footer{
       margin-top: 26px;
       color: rgba(255,255,255,.45);
@@ -309,7 +384,54 @@
       <div class="pill"><span class="dot"></span><span id="syncState">Connecting…</span></div>
     </header>
 
+    <!-- NEW: Filter bar -->
+    <div class="filters">
+      <div class="filter-group">
+        <span class="chip"><strong>Filter</strong></span>
+        <select class="select" id="typeFilter" aria-label="Filter by run type">
+          <option value="all">All types</option>
+          <option value="road">Road</option>
+          <option value="trail">Trail</option>
+        </select>
+
+        <select class="select" id="monthFilter" aria-label="Filter by month">
+          <option value="all">All months</option>
+        </select>
+
+        <button id="resetFilters" type="button" style="background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.16); font-weight:650;">
+          Reset
+        </button>
+      </div>
+
+      <div class="filter-group">
+        <span class="chip"><span style="opacity:.9">Showing:</span> <strong id="shownCount">0</strong></span>
+      </div>
+    </div>
+
     <main class="grid" id="runs"></main>
+
+    <!-- NEW: Suggest a run -->
+    <div class="divider"></div>
+    <section class="card">
+      <div class="card-inner" style="grid-template-columns: 1fr;">
+        <div class="panel">
+          <h3>Suggest a run</h3>
+          <p class="small">Have a cool race idea? Drop the link + a short note. This will be saved in the same Google Sheet, on a separate tab.</p>
+
+          <div class="signup" style="margin-top:12px;">
+            <input type="text" id="suggestLink" placeholder="Run website link (https://…)" />
+          </div>
+          <div style="margin-top:10px;">
+            <textarea id="suggestNote" placeholder="Why this run? Distance, travel idea, deadline, etc."></textarea>
+          </div>
+
+          <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <button id="suggestBtn" type="button">Submit suggestion</button>
+            <div class="status" id="suggestStatus"></div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <footer>
       This website has been created by Markus.
@@ -318,7 +440,7 @@
 
 <script>
   // ✅ Put your Apps Script Web App URL here (must end with /exec)
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBD2mBmhhEBxEzAxLkpG9A7Jzeeml5Y6oYPUOEzrM260kZapYTmLIFpMv1YvOeHHIk/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwO5Slrgbu-nZsoWTOcmlJvD-jewFX0QZaUkLP0QQa6EhS4ngt3VPEWzfGlpk3Anf3w/exec";
 
   // Run data (hardcoded "info" shown to everyone)
   const RUNS = [
@@ -364,6 +486,16 @@
   const elRuns = document.getElementById("runs");
   const elSync = document.getElementById("syncState");
 
+  const elTypeFilter = document.getElementById("typeFilter");
+  const elMonthFilter = document.getElementById("monthFilter");
+  const elResetFilters = document.getElementById("resetFilters");
+  const elShownCount = document.getElementById("shownCount");
+
+  const elSuggestLink = document.getElementById("suggestLink");
+  const elSuggestNote = document.getElementById("suggestNote");
+  const elSuggestBtn = document.getElementById("suggestBtn");
+  const elSuggestStatus = document.getElementById("suggestStatus");
+
   function fmtDateTime(iso){
     const d = new Date(iso);
     const opts = { weekday:"short", year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" };
@@ -376,10 +508,45 @@
     }[s]));
   }
 
-  function render(){
-    const sorted = [...RUNS].sort((a,b)=> new Date(a.dateISO) - new Date(b.dateISO));
+  function monthKey(iso){
+    const d = new Date(iso);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`; // e.g. 2026-01
+  }
 
-    elRuns.innerHTML = sorted.map(run => `
+  function monthLabel(key){
+    const [y, m] = key.split("-").map(Number);
+    const d = new Date(y, m - 1, 1);
+    return new Intl.DateTimeFormat(undefined, { month:"long", year:"numeric" }).format(d);
+  }
+
+  function populateMonthFilter(){
+    const keys = Array.from(new Set(RUNS.map(r => monthKey(r.dateISO)))).sort();
+    for (const k of keys){
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = monthLabel(k);
+      elMonthFilter.appendChild(opt);
+    }
+  }
+
+  function getFilteredRuns(){
+    const type = elTypeFilter.value;
+    const month = elMonthFilter.value;
+
+    return RUNS.filter(r => {
+      const typeOk = (type === "all") || (r.type === type);
+      const monthOk = (month === "all") || (monthKey(r.dateISO) === month);
+      return typeOk && monthOk;
+    }).sort((a,b)=> new Date(a.dateISO) - new Date(b.dateISO));
+  }
+
+  function render(){
+    const filtered = getFilteredRuns();
+    elShownCount.textContent = String(filtered.length);
+
+    elRuns.innerHTML = filtered.map(run => `
       <section class="card" data-runid="${run.id}">
         <div class="card-inner">
           <div class="left">
@@ -441,7 +608,7 @@
       </section>
     `).join("");
 
-    for (const run of RUNS){
+    for (const run of filtered){
       const card = elRuns.querySelector(`.card[data-runid="${run.id}"]`);
       const btn = card.querySelector("[data-submit]");
       btn.addEventListener("click", () => signup(run.id, run.title));
@@ -485,7 +652,10 @@
 
     const grouped = data.grouped || {};
 
-    for (const run of RUNS){
+    // Update only cards currently on screen (filtered)
+    const visible = getFilteredRuns();
+
+    for (const run of visible){
       const list = (grouped[run.id] || []).map(x => x.name).filter(Boolean);
 
       const uniq = [];
@@ -507,7 +677,6 @@
     const body = new URLSearchParams({ runId, runTitle, name });
 
     const res = await fetch(SCRIPT_URL, { method: "POST", body });
-    // if CORS blocks reading, this may throw before json parsing
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "Failed to sign up");
     return data;
@@ -515,6 +684,7 @@
 
   function setStatus(runId, kind, msg){
     const card = elRuns.querySelector(`.card[data-runid="${runId}"]`);
+    if (!card) return;
     const s = card.querySelector("[data-status]");
     s.className = "status " + (kind || "");
     s.textContent = msg || "";
@@ -522,12 +692,14 @@
 
   function setCount(runId, n){
     const card = elRuns.querySelector(`.card[data-runid="${runId}"]`);
+    if (!card) return;
     const c = card.querySelector("[data-count]");
     c.textContent = `${n} signed up`;
   }
 
   function setNames(runId, names){
     const card = elRuns.querySelector(`.card[data-runid="${runId}"]`);
+    if (!card) return;
     const ul = card.querySelector("[data-names]");
     ul.innerHTML = (names && names.length)
       ? names.map(x => `<li>${escapeHtml(x)}</li>`).join("")
@@ -581,8 +753,67 @@
     }
   }
 
+  // ---------- Suggest a run (stores in a different sheet tab) ----------
+  function setSuggestStatus(kind, msg){
+    elSuggestStatus.className = "status " + (kind || "");
+    elSuggestStatus.textContent = msg || "";
+  }
+
+  async function submitSuggestion(){
+    const link = (elSuggestLink.value || "").trim();
+    const note = (elSuggestNote.value || "").trim();
+
+    if (!link || !/^https?:\/\/\S+/i.test(link)){
+      setSuggestStatus("warn", "Please paste a valid link starting with http(s)://");
+      return;
+    }
+
+    elSuggestBtn.disabled = true;
+    setSuggestStatus("", "Submitting…");
+
+    // We use the same Web App endpoint, but pass an "action" so the script knows
+    const body = new URLSearchParams({
+      action: "suggest",
+      link,
+      note
+    });
+
+    // Using no-cors is safest across GitHub Pages; we can’t read response, so we show a generic success.
+    try{
+      await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body });
+      setSuggestStatus("ok", "Suggestion submitted — thanks! 🙌");
+      elSuggestLink.value = "";
+      elSuggestNote.value = "";
+    } catch(e){
+      setSuggestStatus("err", "Error: Failed to submit suggestion.");
+    } finally {
+      elSuggestBtn.disabled = false;
+    }
+  }
+
+  // ---------- Init ----------
   async function init(){
+    populateMonthFilter();
     render();
+
+    // filters
+    elTypeFilter.addEventListener("change", async () => {
+      render();
+      await refreshSignups().catch(()=>{});
+    });
+    elMonthFilter.addEventListener("change", async () => {
+      render();
+      await refreshSignups().catch(()=>{});
+    });
+    elResetFilters.addEventListener("click", async () => {
+      elTypeFilter.value = "all";
+      elMonthFilter.value = "all";
+      render();
+      await refreshSignups().catch(()=>{});
+    });
+
+    // suggestions
+    elSuggestBtn.addEventListener("click", submitSuggestion);
 
     if (!SCRIPT_URL || SCRIPT_URL.includes("PASTE_YOUR_SCRIPT_URL_HERE")) {
       elSync.textContent = "Backend not configured";

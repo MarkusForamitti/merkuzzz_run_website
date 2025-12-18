@@ -317,10 +317,10 @@
   </div>
 
 <script>
-  // 1) Paste your Apps Script Web App URL here:
-  const SCRIPT_URL = "PASTE_YOUR_SCRIPT_URL_HERE";
+  // ✅ Put your Apps Script Web App URL here (must end with /exec)
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBD2mBmhhEBxEzAxLkpG9A7Jzeeml5Y6oYPUOEzrM260kZapYTmLIFpMv1YvOeHHIk/exec";
 
-  // 2) Run data (hardcode "info" to display to all visitors)
+  // Run data (hardcoded "info" shown to everyone)
   const RUNS = [
     {
       id: "eisbaerenlauf-2026-01-18",
@@ -368,6 +368,12 @@
     const d = new Date(iso);
     const opts = { weekday:"short", year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" };
     return new Intl.DateTimeFormat(undefined, opts).format(d);
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
+    }[s]));
   }
 
   function render(){
@@ -442,28 +448,70 @@
     }
   }
 
-  async function apiGetSignups(){
-    const url = `${SCRIPT_URL}?t=${Date.now()}`;
-    const res = await fetch(url, { method: "GET" });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "Failed to load signups");
-    return data.grouped || {};
+  // ---------- JSONP (for cross-origin GET without CORS) ----------
+  function jsonp(url) {
+    return new Promise((resolve, reject) => {
+      const cb = "cb_" + Math.random().toString(36).slice(2);
+      const s = document.createElement("script");
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error("JSONP timeout"));
+      }, 8000);
+
+      function cleanup() {
+        clearTimeout(timeout);
+        try { delete window[cb]; } catch {}
+        s.remove();
+      }
+
+      window[cb] = (data) => {
+        cleanup();
+        resolve(data);
+      };
+
+      s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb + "&t=" + Date.now();
+      s.onerror = () => {
+        cleanup();
+        reject(new Error("JSONP load error"));
+      };
+
+      document.head.appendChild(s);
+    });
   }
 
+  async function refreshSignups(){
+    const data = await jsonp(SCRIPT_URL);   // requires Apps Script doGet to support ?callback=
+    if (!data || !data.ok) throw new Error((data && data.error) || "Failed to load signups");
+
+    const grouped = data.grouped || {};
+
+    for (const run of RUNS){
+      const list = (grouped[run.id] || []).map(x => x.name).filter(Boolean);
+
+      const uniq = [];
+      const seen = new Set();
+      for (const n of list){
+        const key = n.trim().toLowerCase();
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        uniq.push(n.trim());
+      }
+
+      setCount(run.id, uniq.length);
+      setNames(run.id, uniq);
+    }
+  }
+
+  // ---------- POST signup (try normal; fallback to no-cors) ----------
   async function apiPostSignup(runId, runTitle, name){
     const body = new URLSearchParams({ runId, runTitle, name });
 
-    const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body
-        // IMPORTANT: no custom headers here
-    });
-
+    const res = await fetch(SCRIPT_URL, { method: "POST", body });
+    // if CORS blocks reading, this may throw before json parsing
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "Failed to sign up");
     return data;
   }
-
 
   function setStatus(runId, kind, msg){
     const card = elRuns.querySelector(`.card[data-runid="${runId}"]`);
@@ -486,32 +534,6 @@
       : `<li style="opacity:.7">No one yet — be the first 🙂</li>`;
   }
 
-  function escapeHtml(str){
-    return String(str).replace(/[&<>"']/g, s => ({
-      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
-    }[s]));
-  }
-
-  async function refreshSignups(){
-    const grouped = await apiGetSignups();
-
-    for (const run of RUNS){
-      const list = (grouped[run.id] || []).map(x => x.name).filter(Boolean);
-
-      const uniq = [];
-      const seen = new Set();
-      for (const n of list){
-        const key = n.trim().toLowerCase();
-        if (!key || seen.has(key)) continue;
-        seen.add(key);
-        uniq.push(n.trim());
-      }
-
-      setCount(run.id, uniq.length);
-      setNames(run.id, uniq);
-    }
-  }
-
   async function signup(runId, runTitle){
     const card = elRuns.querySelector(`.card[data-runid="${runId}"]`);
     const input = card.querySelector("[data-name]");
@@ -528,15 +550,32 @@
 
     try{
       const resp = await apiPostSignup(runId, runTitle, name);
+
       if (resp.duplicate){
         setStatus(runId, "warn", "You’re already on the list.");
       } else {
         setStatus(runId, "ok", "Signed up! 🎉");
         input.value = "";
       }
+
       await refreshSignups();
+
     } catch(err){
-      setStatus(runId, "err", "Error: " + (err.message || String(err)));
+      // Fallback: submit without CORS (cannot read response)
+      try{
+        await fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          body: new URLSearchParams({ runId, runTitle, name })
+        });
+
+        setStatus(runId, "ok", "Signed up! (refreshing…)");
+        input.value = "";
+        setTimeout(() => refreshSignups().catch(()=>{}), 1000);
+
+      } catch(err2){
+        setStatus(runId, "err", "Error: " + (err2.message || err.message || String(err2)));
+      }
     } finally {
       btn.disabled = false;
     }
@@ -545,13 +584,10 @@
   async function init(){
     render();
 
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQfhv1qnPzVnGjzeCx9KT3I1ugcKefFTy6Tm8aGknD1JgpSoackrX57GgHHsI5k_tk/exec";
-
     if (!SCRIPT_URL || SCRIPT_URL.includes("PASTE_YOUR_SCRIPT_URL_HERE")) {
-        elSync.textContent = "Paste your Apps Script URL in index.html";
-        return;
+      elSync.textContent = "Backend not configured";
+      return;
     }
-
 
     try{
       elSync.textContent = "Syncing…";
@@ -559,7 +595,8 @@
       elSync.textContent = "Live (Google Sheets)";
     } catch (e){
       elSync.textContent = "Backend not reachable";
-      if (RUNS[0]) setStatus(RUNS[0].id, "err", "Backend error. Check Apps Script deployment + URL.");
+      if (RUNS[0]) setStatus(RUNS[0].id, "err",
+        "Backend error. IMPORTANT: your Apps Script doGet must support JSONP (?callback=...).");
     }
 
     setInterval(() => refreshSignups().catch(()=>{}), 30000);

@@ -378,8 +378,8 @@
   <div class="wrap">
     <header>
       <div class="title">
-        <h1>Runs I want to do</h1>
-        <p class="subtitle">Platzhalter</p>
+        <h1>Keine Gnade für die Wade</h1>
+        <p class="subtitle">Race Calender</p>
       </div>
       <div class="pill"><span class="dot"></span><span id="syncState">Connecting…</span></div>
     </header>
@@ -416,7 +416,7 @@
       <div class="card-inner" style="grid-template-columns: 1fr;">
         <div class="panel">
           <h3>Suggest a run</h3>
-          <p class="small">Have a cool race idea? Drop the link + a short note. This will be saved in the same Google Sheet, on a separate tab.</p>
+          <p class="small">Have a cool race idea? Drop the link + a short note.</p>
 
           <div class="signup" style="margin-top:12px;">
             <input type="text" id="suggestLink" placeholder="Run website link (https://…)" />
@@ -613,6 +613,46 @@
     distance: "10 km (350 hm)",
     cost: "€25+",
     url: "https://buckltour.at/events/run-the-klamm" // official event page  [oai_citation:12‡buckltour.at](https://buckltour.at/events/run-the-klamm?utm_source=chatgpt.com)
+  },
+  {
+    id: "vienna-trail-run-2026-10-18",
+    title: "Vienna Trail Run (buckltour)",
+    type: "trail",
+    dateISO: "2026-10-18T09:00:00+02:00",
+    location: "Vienna / Wienerwald, Austria",
+    distance: "7.5 km (300 hm) · 16 km (550 hm) · 24.7 km (1000 hm)",
+    cost: "TBD",
+    url: "https://viennatrailrun.at/" // official event site ([viennatrailrun.at](https://viennatrailrun.at/?utm_source=chatgpt.com))
+  },
+  {
+    id: "innsbruck-alpine-trailrun-festival-2026-04-29",
+    title: "Innsbruck Alpine Trailrun Festival (buckltour)",
+    type: "trail",
+    dateISO: "2026-04-29T08:00:00+02:00",
+    location: "Innsbruck, Tyrol, Austria",
+    distance: "7.3 km (250 hm) · 17.3 km (520 hm) · 26.2 km (870 hm) · 37.8 km (2110 hm) · 42.3 km (2500 hm) · 63.9 km (2450 hm) · 86.7 km (3880 hm) · 108.3 km (5600 hm)",
+    cost: "TBD",
+    url: "https://innsbruckalpine.laufwerkstatt.at/" // official event site ([innsbruckalpine.at](https://innsbruckalpine.laufwerkstatt.at/?lang=en&utm_source=chatgpt.com))  [oai_citation:0‡Innsbruck Alpine](https://innsbruckalpine.at/strecke/?utm_source=chatgpt.com)
+  },
+  {
+    id: "wachau-trail-2026-10-03",
+    title: "Wachau Trail (buckltour)",
+    type: "trail",
+    dateISO: "2026-10-03T06:00:00+02:00",
+    location: "Wachau / Krems an der Donau, Austria",
+    distance: "10.2 km (355 hm) · 24.2 km (1007 hm) · 34.8 km (1397 hm) · 56.7 km (2526 hm) · 77 km (3191 hm) · 101 km (3886 hm) · 160 km (5900 hm)",
+    cost: "TBD",
+    url: "https://www.wachautrail.at/" // official event site ([wachautrail.at](https://www.wachautrail.at/?utm_source=chatgpt.com))  [oai_citation:1‡Wachau Trail](https://www.wachautrail.at/?utm_source=chatgpt.com)
+  },
+  {
+    id: "vienna-city-marathon-2026-04-19",
+    title: "Vienna City Marathon (buckltour)",
+    type: "road",
+    dateISO: "2026-04-19T09:00:00+02:00",
+    location: "Vienna, Austria",
+    distance: "42.195 km · 21.0975 km · 10 km · 5 km",
+    cost: "TBD",
+    url: "https://www.vienna-marathon.com/" // official event site ([vienna-marathon.com](https://www.vienna-marathon.com/?go=welcome&lang=en&utm_source=chatgpt.com))
   }
   ];
 
@@ -740,7 +780,7 @@
               </h3>
 
               <p class="small">
-                Enter your name to signal you’ll attend for sure. Everyone can see the list.
+              
               </p>
 
               <div class="signup">
@@ -851,7 +891,7 @@
     const ul = card.querySelector("[data-names]");
     ul.innerHTML = (names && names.length)
       ? names.map(x => `<li>${escapeHtml(x)}</li>`).join("")
-      : `<li style="opacity:.7">No one yet — be the first 🙂</li>`;
+      : `<li style="opacity:.7">No one yet 🥺</li>`;
   }
 
   async function signup(runId, runTitle){
